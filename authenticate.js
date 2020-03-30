@@ -42,12 +42,18 @@ exports.jwtPassport = passport.use(
 exports.verifyUser = passport.authenticate('jwt', { session: false });
 
 exports.verifyAdmin = ((req, res, next) => {
-    if (req.user.admin === true) {
-        return next();
-    } else {
-        err = new Error('You do not have authorization');
-        err.staus = 404;
-        return next(err);
-    }
+    User.findById({_id: req.user._id})
+    .then((user) => {
+            if (req.user.admin === true) {
+                console.log('This user is an admin', user.admin)
+            return next();
+        } else {
+            err = new Error('You are not an admin and do not have authorization');
+            err.staus = 404;
+            return next(err);
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+   
 });
 

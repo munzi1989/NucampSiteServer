@@ -205,10 +205,21 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
 
         Campsite.findById(req.params.campsiteId)
             .then(campsite => {
-                if (campsite && campsite.comments.id(req.params.commentId)) {
+                if (campsite && campsite.comments.id(req.params.commentId) && campsite.comments.id(req.params.commentId).author.equals(req.user._id)) {
                     campsite.comments.id(req.params.commentId).remove();
                     campsite.save()
                         .then(campsite => {
+                            console.log(`Removed comment from ${req.params.campsiteId}`)
+                            res.statusCode = 200;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.json(campsite)
+                        })
+                        .catch(err => next(err));
+                } else if (campsite && req.user.admin) {
+                    campsite.comments.id(req.params.commentId).remove();
+                    campsite.save()
+                        .then(campsite => {
+                            console.log(`ADMIN Removed comment from ${req.params.campsiteId}`)
                             res.statusCode = 200;
                             res.setHeader('Content-Type', 'application/json');
                             res.json(campsite)
@@ -218,12 +229,16 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
                     err = new Error(`Campsite ${req.params.campsiteId} not found`);
                     err.status = 404;
                     return next(err);
+                } else if (campsite.comments.id(req.params.commentId).author._id !== req.user._id && campsite.comments.id(req.params.commentId).author.admin === false) {
+                    err = new Error(`You are not authorized. This is not your comment`);
+                    err.status = 404;
+                    return next(err);
                 } else {
                     err = new Error(`Comment ${req.params.commentId} not found`);
                     err.status = 404;
                     return next(err);
                 }
-            })
+            }, (err) => next(err))
             .catch(err => next(err));
     });
 
